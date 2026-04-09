@@ -674,6 +674,7 @@ export default function RBTreeApp() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { overflow-x: hidden; max-width: 100vw; -webkit-text-size-adjust: 100%; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f3f4f6; }
         ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
@@ -688,20 +689,101 @@ export default function RBTreeApp() {
         .btn-search { background: #10b981; }
         .btn-secondary { background: white; color: #374151; border: 1px solid #d1d5db; padding: 9px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 13px; transition: all 0.2s; }
         .btn-secondary:hover { background: #f9fafb; border-color: #9ca3af; }
-        input[type="number"], input[type="text"] { background: white; border: 1.5px solid #d1d5db; color: #1f2937; padding: 10px 14px; border-radius: 8px; font-size: 14px; outline: none; font-family: 'JetBrains Mono', monospace; transition: border 0.2s; width: 110px; }
+        /* CRITICAL: font-size must be >= 16px to prevent iOS Safari auto-zoom on focus */
+        input[type="number"], input[type="text"] { background: white; border: 1.5px solid #d1d5db; color: #1f2937; padding: 10px 14px; border-radius: 8px; font-size: 16px; outline: none; font-family: 'JetBrains Mono', monospace; transition: border 0.2s; width: 120px; }
         input:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.1); }
-        .panel { background: white; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr !important; } }
+        .panel { background: white; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); min-width: 0; }
+
+        /* ─── Mobile / tablet ─── */
+        @media (max-width: 900px) {
+          .main-grid {
+            grid-template-columns: 1fr !important;
+            gap: 14px !important;
+          }
+          .code-panel {
+            order: 2;
+            position: static !important;
+            top: auto !important;
+          }
+          .code-scroll {
+            max-height: 360px !important;
+          }
+          .right-panel {
+            order: 1;
+          }
+          .header-wrap {
+            padding: 18px 14px 8px !important;
+          }
+          .header-title {
+            font-size: 19px !important;
+          }
+          .header-sub {
+            font-size: 11px !important;
+          }
+          .container-wrap {
+            padding: 0 14px 28px !important;
+          }
+        }
+
+        /* ─── Phone ─── */
+        @media (max-width: 560px) {
+          .controls-row {
+            gap: 6px !important;
+          }
+          /* NOTE: font-size stays at 16px — anything smaller triggers iOS Safari auto-zoom on focus */
+          .controls-row input {
+            width: 100px !important;
+            padding: 9px 10px !important;
+          }
+          .btn-op {
+            padding: 9px 13px !important;
+            font-size: 12px !important;
+          }
+          .btn-secondary {
+            padding: 8px 12px !important;
+            font-size: 12px !important;
+          }
+          .right-controls {
+            width: 100%;
+            margin-left: 0 !important;
+            justify-content: space-between;
+            border-top: 1px solid #f3f4f6;
+            padding-top: 10px;
+            margin-top: 4px;
+          }
+          .controls-panel {
+            padding: 14px !important;
+          }
+          .tree-panel {
+            padding: 14px !important;
+          }
+          .code-scroll {
+            max-height: 300px !important;
+            font-size: 11px !important;
+          }
+          .legend-panel {
+            padding: 12px 14px !important;
+            gap: 12px !important;
+            font-size: 11px !important;
+          }
+          .info-panel {
+            padding: 10px 14px !important;
+            font-size: 11px !important;
+          }
+          .header-title {
+            font-size: 17px !important;
+          }
+        }
       `}</style>
 
-      <div style={{ padding: "24px 24px 20px", textAlign: "center" }}>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111827", letterSpacing: "-0.3px" }}>
+      <div className="header-wrap" style={{ padding: "24px 24px 20px", textAlign: "center" }}>
+        <h1 className="header-title" style={{ fontSize: 24, fontWeight: 700, color: "#111827", letterSpacing: "-0.3px" }}>
           Árvores Rubro-Negras <span style={{ color: "#dc2626" }}>·</span> Laboratório Interativo
         </h1>
-        <p style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>Visualize o código C em execução enquanto a árvore se transforma</p>
+        <p className="header-sub" style={{ color: "#6b7280", fontSize: 13, marginTop: 4 }}>Visualize o código C em execução enquanto a árvore se transforma</p>
       </div>
 
-      <div style={{ padding: "0 24px 40px", maxWidth: 1280, margin: "0 auto" }}>
+      <div className="container-wrap" style={{ padding: "0 24px 40px", maxWidth: 1280, margin: "0 auto" }}>
         <MainLab />
       </div>
     </div>
@@ -719,6 +801,7 @@ function MainLab() {
   const [showNil, setShowNil] = useState(false);
   const timerRef = useRef(null);
   const funcRefs = useRef({});
+  const codeScrollRef = useRef(null);
 
   const cur = steps[stepIdx];
   const displayTree = cur?.tree ?? root;
@@ -727,7 +810,13 @@ function MainLab() {
     if (cur?.func) {
       setCurrentFunc(cur.func);
       const el = funcRefs.current[cur.func];
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      const container = codeScrollRef.current;
+      if (el && container) {
+        // Scroll ONLY the code container, never the whole page.
+        // offsetTop is relative to the container (which has position: relative implicitly).
+        const targetTop = el.offsetTop - 8;
+        container.scrollTo({ top: targetTop, behavior: "smooth" });
+      }
     }
   }, [cur]);
 
@@ -792,7 +881,7 @@ function MainLab() {
   return (
     <div className="main-grid" style={{ display: "grid", gridTemplateColumns: "minmax(360px, 480px) 1fr", gap: 20, alignItems: "start" }}>
       {/* Left: C Code Panel */}
-      <div className="panel" style={{ padding: 0, overflow: "hidden", position: "sticky", top: 20 }}>
+      <div className="panel code-panel" style={{ padding: 0, overflow: "hidden", position: "sticky", top: 20 }}>
         <div style={{ padding: "14px 18px", borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f9fafb" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ display: "flex", gap: 5 }}>
@@ -810,7 +899,7 @@ function MainLab() {
           )}
         </div>
 
-        <div style={{ maxHeight: 680, overflowY: "auto", padding: "12px 0", fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5 }}>
+        <div ref={codeScrollRef} className="code-scroll" style={{ maxHeight: 680, overflowY: "auto", padding: "12px 0", fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5, position: "relative" }}>
           {FUNC_ORDER.map(fname => {
             const fn = C_CODE[fname];
             const isActive = currentFunc === fname;
@@ -845,14 +934,14 @@ function MainLab() {
       </div>
 
       {/* Right: Interface */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <div className="panel" style={{ padding: 18 }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="right-panel" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="panel controls-panel" style={{ padding: 18 }}>
+          <div className="controls-row" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
             <input type="number" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && doInsert()} placeholder="valor" />
             <button className="btn-op btn-insert" onClick={doInsert}>Inserir</button>
             <button className="btn-op btn-delete" onClick={doDelete} disabled={!root}>Deletar</button>
             <button className="btn-op btn-search" onClick={doSearch} disabled={!root}>Buscar</button>
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="right-controls" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
               <button
                 className="btn-secondary"
                 onClick={() => setShowNil(!showNil)}
@@ -877,7 +966,7 @@ function MainLab() {
           </div>
         </div>
 
-        <div className="panel" style={{ padding: 20, background: "#fafbfc" }}>
+        <div className="panel tree-panel" style={{ padding: 20, background: "#fafbfc" }}>
           <TreeSVG root={displayTree} highlight={cur?.highlight} animating={playing} showNil={showNil} />
 
           {cur && (
@@ -903,13 +992,13 @@ function MainLab() {
         </div>
 
         {root && (
-          <div className="panel" style={{ padding: "12px 18px", display: "flex", gap: 20, fontSize: 12, color: "#6b7280", flexWrap: "wrap" }}>
+          <div className="panel info-panel" style={{ padding: "12px 18px", display: "flex", gap: 20, fontSize: 12, color: "#6b7280", flexWrap: "wrap" }}>
             <span><strong style={{ color: "#1f2937" }}>In-order:</strong> <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{keyList.join(", ")}</span></span>
             <span><strong style={{ color: "#1f2937" }}>Nós:</strong> {keyList.length}</span>
           </div>
         )}
 
-        <div className="panel" style={{ padding: "14px 18px", display: "flex", gap: 20, flexWrap: "wrap", fontSize: 12, color: "#4b5563" }}>
+        <div className="panel legend-panel" style={{ padding: "14px 18px", display: "flex", gap: 20, flexWrap: "wrap", fontSize: 12, color: "#4b5563" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div style={{ width: 16, height: 16, borderRadius: "50%", background: "#dc2626" }} /> Vermelho
           </div>
